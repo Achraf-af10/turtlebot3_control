@@ -1,58 +1,49 @@
+"""Read-only odometry inspection for commissioning the hardware tracker."""
 
-import math
-
-import rclpy
-from rclpy.node import Node
 from nav_msgs.msg import Odometry
+import rclpy
+from rclpy.executors import ExternalShutdownException
+from rclpy.node import Node
+from rclpy.qos import qos_profile_sensor_data
+
+from trajectory_controller.safety import quaternion_yaw
+from trajectory_controller.trajectory import require_finite
 
 
 class OdometryReader(Node):
+    """Log validated planar pose and body velocities without commanding motion."""
+
     def __init__(self):
+        """Subscribe using a QoS compatible with best-effort odometry."""
         super().__init__('odometry_reader')
-
         self.subscription = self.create_subscription(
-            Odometry,
-            '/odom',
-            self.odom_callback,
-            10
-        )
-
-        self.get_logger().info('Lecteur odometrie demarre.')
+            Odometry, 'odom', self.odom_callback, qos_profile_sensor_data)
 
     def odom_callback(self, msg):
-        # Position du robot
-        x = msg.pose.pose.position.x
-        y = msg.pose.pose.position.y
-
-        # Orientation : quaternion vers angle de lacet
-        q = msg.pose.pose.orientation
-        sin_yaw = 2.0 * (q.w * q.z + q.x * q.y)
-        cos_yaw = 1.0 - 2.0 * (q.y * q.y + q.z * q.z)
-        theta = math.atan2(sin_yaw, cos_yaw)
-
-        # Vitesses mesurees
-        v = msg.twist.twist.linear.x
-        omega = msg.twist.twist.angular.z
-
+        """Check numbers and quaternion before displaying an observation."""
+        pos, q = msg.pose.pose.position, msg.pose.pose.orientation
+        v, w = msg.twist.twist.linear.x, msg.twist.twist.angular.z
+        try:
+            require_finite(pos.x, pos.y, v, w)
+            theta = quaternion_yaw(q.x, q.y, q.z, q.w)
+        except ValueError as exc:
+            self.get_logger().warning(str(exc), throttle_duration_sec=1.0)
+            return
         self.get_logger().info(
-            f'x={x:.3f} m | y={y:.3f} m | '
-            f'theta={theta:.3f} rad | '
-            f'v={v:.3f} m/s | omega={omega:.3f} rad/s'
-        )
+            f'frame={msg.header.frame_id}, child={msg.child_frame_id} | '
+            f'x={pos.x:.3f}, y={pos.y:.3f} m | theta={theta:.3f} rad | '
+            f'v={v:.3f} m/s, omega={w:.3f} rad/s', throttle_duration_sec=0.5)
 
 
 def main(args=None):
+    """Run the read-only inspection node."""
     rclpy.init(args=args)
     node = OdometryReader()
-
     try:
         rclpy.spin(node)
-    except KeyboardInterrupt:
+    except (KeyboardInterrupt, ExternalShutdownException):
         pass
     finally:
         node.destroy_node()
-        rclpy.shutdown()
-
-
-if __name__ == '__main__':
-    main()
+        if rclpy.ok():
+            rclpy.shutdown()

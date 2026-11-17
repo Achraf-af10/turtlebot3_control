@@ -1,0 +1,37 @@
+name: Controller checks
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  core:
+    runs-on: ubuntu-22.04
+    strategy:
+      matrix:
+        python: ['3.10', '3.12']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - run: python -m pip install pytest ruff
+      - run: python -m pytest -q
+      - run: ruff check src
+  ros-humble:
+    runs-on: ubuntu-22.04
+    container: ros:humble-ros-base
+    env:
+      ROS_DOMAIN_ID: '178'
+      ROS_LOCALHOST_ONLY: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Dependencies
+        run: |
+          apt-get update
+          apt-get install -y python3-colcon-common-extensions python3-pytest ros-humble-diagnostic-msgs ros-humble-std-srvs
+      - name: Build and ROS transport tests
+        shell: bash
+        run: |
+          source /opt/ros/humble/setup.bash
+          colcon build --symlink-install
+          source install/setup.bash
+          python3 -m pytest -q -m 'not linter'

@@ -1,0 +1,42 @@
+tracking_node:
+  ros__parameters:
+    use_sim_time: false
+    trajectory: circle             # circle ou eight
+    radius: 0.5                    # m (cercle)
+    eight_a: 0.6                   # m, x = a sin(phase) avant rotation
+    eight_b: 0.3                   # m, y = b sin(2 phase) avant rotation
+    reference_speed: 0.08          # m/s, vitesse maximale pour le huit
+    ramp_time: 2.0                 # s, rampe de la reference
+    run_duration: 90.0             # s, puis arret et nouveau start requis
+    k1: 0.5
+    k2: 8.0
+    k3: 1.0
+    control_rate: 20.0             # Hz, mesurer la gigue sur le robot
+    wheel_separation: 0.160        # m, Burger standard
+    wheel_radius: 0.033            # m, pour diagnostics seulement
+    max_linear_speed: 0.10         # m/s, limite experimentale conservative
+    max_angular_speed: 0.8         # rad/s
+    max_wheel_linear_speed: 0.15   # m/s, borne de |v +/- b*w/2|
+    max_acceleration: 0.05         # m/s^2, commande normale seulement
+    max_angular_acceleration: 0.5  # rad/s^2
+    odom_timeout: 0.3              # s, age mesure ET age reception
+    future_tolerance: 0.05         # s, horloges des machines synchronisees
+    max_control_gap: 0.2           # s, arret si periode de boucle excessive
+    clock_jump_tolerance: 0.1      # s, ecart entre horloge ROS et monotone
+    max_position_error: 0.35       # m, arret si depassement
+    max_heading_error: 1.2         # rad, arret si depassement
+    odom_frame: odom
+    base_frame: base_footprint
+    max_path_poses: 2000
+
+command_guard:
+  ros__parameters:
+    use_sim_time: false
+    stamped_cmd_vel: false         # true si le driver attend TwistStamped
+    timeout: 0.3                   # s, age de commande ET age de reception
+    future_tolerance: 0.05
+    base_frame: base_footprint
+    max_linear_speed: 0.10         # garder coherent avec tracking_node
+    max_angular_speed: 0.8
+    max_wheel_linear_speed: 0.15
+    wheel_separation: 0.160

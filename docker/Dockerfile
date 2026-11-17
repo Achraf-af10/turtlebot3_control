@@ -5,11 +5,10 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update && apt-get install -y \
     ros-humble-turtlebot3 \
-    ros-humble-turtlebot3-gazebo \
     ros-humble-turtlebot3-teleop \
-    python3-numpy \
-    python3-matplotlib \
-    python3-scipy \
+    ros-humble-diagnostic-msgs \
+    ros-humble-std-srvs \
+    python3-pytest \
     python3-colcon-common-extensions \
     python3-rosdep \
     git \
@@ -18,6 +17,9 @@ RUN apt-get update && apt-get install -y \
 
 ENV TURTLEBOT3_MODEL=burger
 
-WORKDIR /workspace/robust_nonlinear_controller
+WORKDIR /workspace/turtlebot3_control
+
+COPY src ./src
+RUN /bin/bash -c 'source /opt/ros/humble/setup.bash && colcon build --symlink-install'
 
 CMD ["bash"]
